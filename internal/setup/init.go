@@ -3,7 +3,7 @@ package setup
 import (
     "log"
     "api/internal/di"
-    "api/internal/core"
+    "api/internal/core/database"
     "api/internal/infra/router"
     "net/http"
     "api/internal/modules/signup/controllers"

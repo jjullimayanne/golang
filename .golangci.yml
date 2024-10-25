@@ -1,0 +1,28 @@
+linters-settings:
+  govet:
+    check-shadowing: true
+
+  golint:
+    min-confidence: 0.8
+
+  gocyclo:
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 2
+
+  gofmt:
+    simplify: true
+
+linters:
+  enable:
+    - govet
+    - golint
+    - gocyclo
+    - gofmt
+    - goconst
+
+run:
+  timeout: 5m
+

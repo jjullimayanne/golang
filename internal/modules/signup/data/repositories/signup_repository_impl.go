@@ -3,8 +3,15 @@ package repositories
 import (
     "api/internal/modules/signup/domain/entities"
     "api/internal/modules/signup/domain/repositories"  
-    "api/internal/core"
-    "fmt"
+    "api/internal/core/database"
+    "api/internal/core/error"
+)
+
+//avoid sql injection
+
+const (
+    createUserQuery = `INSERT INTO users (username, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5)`
+    getUserByUsernameQuery = `SELECT id, username, first_name, last_name, email, password FROM users WHERE username = $1`
 )
 
 type UserRepository struct {
@@ -16,22 +23,20 @@ func NewUserRepository(db core.Database) repositories.SignUpRepository {
 }
 
 func (repo *UserRepository) CreateUser(user *entities.User) error {
-    query := `INSERT INTO users (username, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5)`
-    _, err := repo.db.Exec(query, user.Username, user.FirstName, user.LastName, user.Email, user.Password)
+    _, err := repo.db.Exec(createUserQuery, user.Username, user.FirstName, user.LastName, user.Email, user.Password)
     if err != nil {
-        return fmt.Errorf("erro ao criar o usuário: %v", err)
+        return coreError.WrapError(err, "erro ao criar o usuário")
     }
     return nil
 }
 
 func (repo *UserRepository) GetUserByUsername(username string) (*entities.User, error) {
-    query := `SELECT id, username, first_name, last_name, email, password FROM users WHERE username = $1`
-    row := repo.db.QueryRow(query, username)
+    row := repo.db.QueryRow(getUserByUsernameQuery, username)
 
     var user entities.User
     err := row.Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Email, &user.Password)
     if err != nil {
-        return nil, fmt.Errorf("erro ao buscar o usuário: %v", err)
+        return nil, coreError.WrapError(err, "erro ao buscar o usuário")
     }
 
     return &user, nil

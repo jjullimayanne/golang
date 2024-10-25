@@ -4,7 +4,7 @@ import (
     "api/internal/modules/signup/controllers"
     "api/internal/modules/signup/usecase"   
     "api/internal/modules/signup/data/repositories"
-    "api/internal/core"
+    "api/internal/core/database"
 )
 
 func InjectDependencies(database core.Database) (*controllers.AuthController, error) {

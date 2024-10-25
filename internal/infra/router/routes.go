@@ -5,6 +5,8 @@ import (
     "api/internal/core/routes"
     "net/http"
     "api/internal/modules/signup/controllers"
+    "api/internal/modules/health/controllers"  
+
 )
 
 type MuxRouter struct {
@@ -18,6 +20,8 @@ func (r *MuxRouter) NewRouter() core.Router {
 
 func (r *MuxRouter) SetupRoutes(authController *controllers.AuthController) {
     r.muxRouter.HandleFunc("/signup", authController.RegisterUser).Methods("POST")
+
+    r.muxRouter.HandleFunc("/health", healthController.HealthCheckHandler).Methods("GET")
 }
 
 func (r *MuxRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
