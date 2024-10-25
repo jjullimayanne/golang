@@ -1,4 +1,4 @@
-package core
+package dbInterface
 
 import "database/sql"
 

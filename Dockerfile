@@ -1,28 +1,28 @@
-# Use uma imagem base de build e runtime mais compatível
+# Usa uma imagem base compatível com Go
 FROM golang:1.23-bullseye AS builder
 
 WORKDIR /app
 
-# Copia os arquivos de dependências
+# Copia os arquivos de dependências do Go
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copia o restante do código
+# Copia o restante do código-fonte
 COPY . .
 
-# Compila o binário a partir do arquivo main.go na pasta cmd
+# Compila o binário principal a partir do arquivo main.go
 RUN go build -o api-reciclagem ./cmd/main.go
 
-# Usa a mesma imagem para runtime
+# Usa uma imagem para o runtime
 FROM golang:1.23-bullseye
 
 WORKDIR /app
 
-# Copia o binário gerado da etapa anterior
+# Copia o binário gerado na etapa anterior
 COPY --from=builder /app/api-reciclagem .
 
-# Exponha a porta 8080
+# Expõe a porta 8080
 EXPOSE 8080
 
-# Executa o binário
+# Comando para rodar a aplicação
 CMD ["./api-reciclagem"]

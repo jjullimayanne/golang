@@ -4,7 +4,7 @@ import (
     "encoding/json"
     "net/http"
     "api/internal/modules/signup/domain/entities"
-    "api/internal/modules/signup/usecase"
+    "api/internal/modules/signup/usecases"
 )
 
 type AuthController struct {

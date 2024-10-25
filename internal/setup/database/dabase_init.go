@@ -1,25 +1,45 @@
 package database
 
 import (
-    "api/configs/db"
-    "api/internal/infra/db"
-    "api/internal/core/error"
+	dbInterface "api/internal/core/database/interface"
+	dbConfig "api/internal/core/database/struct"
+	coreError "api/internal/core/error"
+	"api/internal/infra/db"
+	"time"
 )
 
-func InitDatabase() (*db.PostgresDB, error) {
-    databaseConfig, err := configs.LoadDBConfig()
-    if err != nil {
-        coreError.LogError(err) 
-        return nil, coreError.WrapError(err, "falha ao carregar a configuração do banco de dados")
-    }
+const (
+	maxRetries    = 5               
+	retryInterval = 2 * time.Second 
+	initialDelay  = 5 * time.Second
+)
 
-    postgresDatabase := db.NewPostgresDB(databaseConfig)
-    _, err = postgresDatabase.Connect()
-    if err != nil {
-        wrappedErr := coreError.WrapError(err, "não foi possível conectar ao banco de dados")
-        coreError.LogError(wrappedErr) 
-        return nil, wrappedErr
-    }
+func InitDatabase() (dbInterface.Database, error) {
+	databaseConfig, err := dbConfig.LoadDBConfig()
+	if err != nil {
+		coreError.LogError(err)
+		return nil, coreError.WrapError(err, "falha ao carregar a configuração do banco de dados")
+	}
 
-    return postgresDatabase, nil
+	time.Sleep(initialDelay)
+
+	database := db.NewDatabase(databaseConfig)
+
+	for i := 0; i < maxRetries; i++ {
+		_, err = database.Connect()
+		if err == nil {
+			coreError.LogError(coreError.WrapError(err, "DONEDONEDONEDONEDONEDOEEEEEEEEEE"))
+			return database, nil
+		}
+
+		coreError.LogError(coreError.WrapError(err, "tentativa de conexão falhou"))
+
+		time.Sleep(retryInterval)
+	}
+
+	wrappedErr := coreError.WrapError(err, "não foi possível conectar ao banco de dados após várias tentativas")
+	coreError.LogError(wrappedErr)
+	return nil, wrappedErr
 }
+
+//TODO: change to health check later 

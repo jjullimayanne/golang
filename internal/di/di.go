@@ -1,18 +1,17 @@
 package di
 
 import (
-    "api/internal/modules/signup/controllers"
-    "api/internal/modules/signup/usecase"   
-    "api/internal/modules/signup/data/repositories"
-    "api/internal/core/database"
+	dbInterface "api/internal/core/database/interface"
+	"api/internal/infra/auth/keycloak"
+	"api/internal/modules/signup/controllers"
+	"api/internal/modules/signup/data/repositories"
+	"api/internal/modules/signup/usecases"
 )
 
-func InjectDependencies(database core.Database) (*controllers.AuthController, error) {
-    userRepository := repositories.NewUserRepository(database)
+func InjectDependencies(dbConnection dbInterface.Database, keycloakAuth *keycloak.KeycloakAuthenticator) (*controllers.AuthController, error) {
+	userRepository := repositories.NewUserRepository(keycloakAuth)
+	registerUserUseCase := usecases.NewRegisterUserUseCase(userRepository)
+	authController := controllers.NewAuthController(registerUserUseCase)
 
-    registerUserUseCase := usecases.NewRegisterUserUseCase(userRepository)
-
-    authController := controllers.NewAuthController(registerUserUseCase)
-
-    return authController, nil
+	return authController, nil
 }
