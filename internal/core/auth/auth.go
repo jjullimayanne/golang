@@ -8,5 +8,5 @@ type Authenticator interface {
 	ValidateToken(r *http.Request) (bool, error)
 	GetUserRoles(r *http.Request) ([]string, error)
 	Middleware(next http.Handler) http.Handler
-	CreateUser(username, email, password string) error
+	CreateUser(username, email, password string) error 
 }

@@ -1,37 +1,39 @@
 package controllers
 
 import (
-    "encoding/json"
-    "net/http"
-    "api/internal/modules/signup/domain/entities"
-    "api/internal/modules/signup/usecases"
+	"api/internal/modules/signup/domain/entities"
+	"api/internal/modules/signup/usecases"
+	"encoding/json"
+	"log"
+	"net/http"
 )
 
 type AuthController struct {
-    RegisterUserUseCase *usecases.RegisterUserUseCase
+	RegisterUserUseCase *usecases.RegisterUserUseCase
 }
 
 func NewAuthController(registerUseCase *usecases.RegisterUserUseCase) *AuthController {
-    return &AuthController{
-        RegisterUserUseCase: registerUseCase,
-    }
+	return &AuthController{
+		RegisterUserUseCase: registerUseCase,
+	}
 }
 
 func (controller *AuthController) RegisterUser(w http.ResponseWriter, r *http.Request) {
-    var userRequest entities.User
+	log.Println("Recebendo requisição de registro de usuário")
 
-    err := json.NewDecoder(r.Body).Decode(&userRequest)
-    if err != nil {
-        http.Error(w, "Dados inválidos", http.StatusBadRequest)
-        return
-    }
+	var userRequest entities.User
+	err := json.NewDecoder(r.Body).Decode(&userRequest)
+	if err != nil {
+		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+		return
+	}
 
-    err = controller.RegisterUserUseCase.Register(&userRequest)
-    if err != nil {
-        http.Error(w, "Erro ao registrar usuário: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
+	err = controller.RegisterUserUseCase.Register(&userRequest)
+	if err != nil {
+		http.Error(w, "Erro ao registrar usuário: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-    w.WriteHeader(http.StatusCreated)
-    w.Write([]byte("Usuário registrado com sucesso"))
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Usuário registrado com sucesso"))
 }

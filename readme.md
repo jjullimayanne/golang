@@ -168,3 +168,8 @@ No  `docker-compose.yml`, esses valores foram definidos com as variáveis de amb
 Usuário: admin
 Senha: admin
 ~~~
+
+
+NGNX 
+Keycloak: estará acessível em https://localhost/auth, encaminhando para http://keycloak:8080.
+API: estará acessível em https://localhost/api, encaminhando para http://api:8080.

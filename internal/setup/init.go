@@ -3,13 +3,19 @@ package setup
 import (
 	"log"
 	"net/http"
+	"time"
 
-	core "api/internal/core/database/interface" // Importa a interface do banco de dados
+	core "api/internal/core/database/interface"
 	"api/internal/di"
 	"api/internal/infra/auth/keycloak"
 	"api/internal/infra/router"
 	"api/internal/modules/signup/controllers"
 	"api/internal/setup/database"
+)
+
+const (
+	maxRetries    = 10               // Número máximo de tentativas
+	retryInterval = 2 * time.Second // Intervalo entre tentativas
 )
 
 func InitAll() (*controllers.AuthController, core.Database, *router.MuxRouter, error) {
@@ -19,9 +25,18 @@ func InitAll() (*controllers.AuthController, core.Database, *router.MuxRouter, e
 		return nil, nil, nil, err
 	}
 
-	keycloakAuth, err := keycloak.NewKeycloakAuthenticator()
+	var keycloakAuth *keycloak.KeycloakAuthenticator
+	for i := 0; i < maxRetries; i++ {
+		keycloakAuth, err = keycloak.NewKeycloakAuthenticator()
+		if err == nil {
+			break // Sucesso na conexão com o Keycloak
+		}
+		log.Printf("Tentativa %d de conexão com Keycloak falhou: %v", i+1, err)
+		time.Sleep(retryInterval) // Aguarda antes de tentar novamente
+	}
+
 	if err != nil {
-		log.Fatalf("Erro ao inicializar Keycloak: %v", err)
+		log.Fatalf("Erro ao inicializar Keycloak após %d tentativas: %v", maxRetries, err)
 		return nil, nil, nil, err
 	}
 

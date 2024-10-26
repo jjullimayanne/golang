@@ -68,7 +68,7 @@ func (a *KeycloakAuthenticator) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		token = token[7:] 
+		token = token[7:]
 
 		_, err := a.Verifier.Verify(context.Background(), token)
 		if err != nil {
@@ -89,7 +89,7 @@ func (a *KeycloakAuthenticator) GetUserRoles(r *http.Request) ([]string, error) 
 		coreError.LogError(err)
 		return nil, err
 	}
-	token = token[7:] 
+	token = token[7:]
 
 	idToken, err := a.Verifier.Verify(context.Background(), token)
 	if err != nil {
@@ -160,6 +160,7 @@ func (a *KeycloakAuthenticator) CreateUser(username, email, password string) err
 		"credentials": []map[string]string{
 			{"type": "password", "value": password, "temporary": "false"},
 		},
+		// Não adicione roles aqui
 	}
 
 	jsonData, err := json.Marshal(user)
@@ -187,4 +188,120 @@ func (a *KeycloakAuthenticator) CreateUser(username, email, password string) err
 	}
 
 	return nil
+}
+
+func (a *KeycloakAuthenticator) assignRoleToUser(username, roleName, accessToken string) error {
+	userID, err := a.getUserIDByUsername(username, accessToken)
+	if err != nil {
+		return err
+	}
+
+	roleID, err := a.getRoleID(roleName, accessToken)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/admin/realms/%s/users/%s/role-mappings/realm", os.Getenv("KEYCLOAK_URL"), os.Getenv("KEYCLOAK_REALM"), userID)
+
+	role := []map[string]interface{}{
+		{"id": roleID, "name": roleName},
+	}
+
+	roleData, err := json.Marshal(role)
+	if err != nil {
+		return coreError.WrapError(err, "erro ao criar JSON para atribuição de role")
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(roleData))
+	if err != nil {
+		return coreError.WrapError(err, "erro ao criar requisição para atribuir role ao usuário")
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return coreError.WrapError(err, "erro ao enviar requisição para atribuir role ao usuário")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return coreError.NewErrorf("erro ao atribuir role ao usuário: status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (a *KeycloakAuthenticator) getUserIDByUsername(username, accessToken string) (string, error) {
+	url := fmt.Sprintf("%s/admin/realms/%s/users?username=%s", os.Getenv("KEYCLOAK_URL"), os.Getenv("KEYCLOAK_REALM"), username)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", coreError.WrapError(err, "erro ao criar requisição para obter usuário")
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", coreError.WrapError(err, "erro ao enviar requisição para obter usuário")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", coreError.NewErrorf("falha ao obter usuário: status %d", resp.StatusCode)
+	}
+
+	var users []struct {
+		ID string `json:"id"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		return "", coreError.WrapError(err, "erro ao decodificar resposta ao obter usuário")
+	}
+
+	if len(users) == 0 {
+		return "", coreError.NewErrorf("usuário não encontrado")
+	}
+
+	return users[0].ID, nil
+}
+
+func (a *KeycloakAuthenticator) getRoleID(roleName, accessToken string) (string, error) {
+	url := fmt.Sprintf("%s/admin/realms/%s/roles", os.Getenv("KEYCLOAK_URL"), os.Getenv("KEYCLOAK_REALM"))
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", coreError.WrapError(err, "erro ao criar requisição para obter roles")
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", coreError.WrapError(err, "erro ao enviar requisição para obter roles")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", coreError.NewErrorf("falha ao obter roles: status %d", resp.StatusCode)
+	}
+
+	var roles []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&roles); err != nil {
+		return "", coreError.WrapError(err, "erro ao decodificar resposta ao obter roles")
+	}
+
+	for _, role := range roles {
+		if role.Name == roleName {
+			return role.ID, nil
+		}
+	}
+
+	return "", coreError.NewErrorf("role '%s' não encontrada", roleName)
 }
